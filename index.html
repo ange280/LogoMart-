@@ -278,7 +278,7 @@ footer{background:var(--surface);border-top:1px solid var(--border);padding:2rem
   <div class="stat-item"><span class="stat-num sn1">+60</span><span class="stat-lbl">Logos créés</span></div>
   <div class="stat-item"><span class="stat-num sn2">48h</span><span class="stat-lbl">Délai livraison</span></div>
   <div class="stat-item"><span class="stat-num sn3">100%</span><span class="stat-lbl">Droits inclus</span></div>
-  <div class="stat-item"><span class="stat-num sn4" style="display:flex;align-items:center;gap:.2rem;">3,9<svg width="20" height="20" viewBox="0 0 24 24" fill="#a855f7"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg></span><span class="stat-lbl">Note clients</span></div>
+  <div class="stat-item"><span class="stat-num sn4">FCFA</span><span class="stat-lbl">Paiement local</span></div>
 </div>
 
 <!-- BOUTIQUE -->
@@ -313,6 +313,11 @@ footer{background:var(--surface);border-top:1px solid var(--border);padding:2rem
       </div>
     </div>
     <div style="font-size:.78rem;color:var(--c3);font-weight:500;">✓ Web · Réseaux sociaux · Impression</div>
+  </div>
+
+  <div class="reveal" style="background:linear-gradient(135deg,rgba(255,107,53,.12),rgba(247,201,72,.08));border:1px solid rgba(255,107,53,.3);border-radius:12px;padding:.9rem 1.3rem;margin-bottom:1.6rem;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:.6rem;">
+    <div style="font-size:.85rem;color:var(--text);font-weight:600;">🎯 Tous les modèles à <span style="color:var(--c1);">3 000 FCFA</span> <span style="text-decoration:line-through;color:var(--muted);font-weight:400;">6 000 FCFA</span></div>
+    <div style="font-size:.72rem;color:var(--muted);">Offre de lancement — jusqu'au 31 août 2026</div>
   </div>
 
   <div class="filter-row">
@@ -670,7 +675,6 @@ function renderLogos(){
       +'<div class="logo-inclus"><span>✓ Nom personnalisé</span> · <span>✓ PNG × 4 + PDF</span></div>'
       +'<div class="logo-footer">'
       +'<div class="logo-price-wrap">'
-      +(l.old_price?'<span class="logo-price-old">'+fp(l.old_price)+'</span>':'')
       +'<span class="logo-price" style="color:'+(l.color||'var(--c1)')+'">'+fp(l.price)+'</span>'
       +'</div>'
       +'<button class="add-cart-btn" id="cb-'+l.id+'" onclick="window.addToCart(\''+l.id+'\')">+ Panier</button>'
