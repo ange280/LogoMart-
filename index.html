@@ -315,10 +315,7 @@ footer{background:var(--surface);border-top:1px solid var(--border);padding:2rem
     <div style="font-size:.78rem;color:var(--c3);font-weight:500;">✓ Web · Réseaux sociaux · Impression</div>
   </div>
 
-  <div class="reveal" style="background:linear-gradient(135deg,rgba(255,107,53,.12),rgba(247,201,72,.08));border:1px solid rgba(255,107,53,.3);border-radius:12px;padding:.9rem 1.3rem;margin-bottom:1.6rem;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:.6rem;">
-    <div style="font-size:.85rem;color:var(--text);font-weight:600;">🎯 Tous les modèles à <span style="color:var(--c1);">3 000 FCFA</span> <span style="text-decoration:line-through;color:var(--muted);font-weight:400;">6 000 FCFA</span></div>
-    <div style="font-size:.72rem;color:var(--muted);">Offre de lancement — jusqu'au 31 août 2026</div>
-  </div>
+  <div class="reveal" id="promoBanner" style="display:none;"></div>
 
   <div class="filter-row">
     <button class="filter-chip active" onclick="filterLogos(this,'all')">Tous</button>
@@ -519,6 +516,7 @@ footer{background:var(--surface);border-top:1px solid var(--border);padding:2rem
         <button class="admin-tab active" onclick="switchTab(this,'tabLogos')">🎨 Mes Logos</button>
         <button class="admin-tab" onclick="switchTab(this,'tabAjouter')">➕ Ajouter</button>
         <button class="admin-tab" onclick="switchTab(this,'tabCommandes')">📋 Commandes</button>
+        <button class="admin-tab" onclick="switchTab(this,'tabPromo')">🎯 Promo</button>
       </div>
 
       <!-- TAB LOGOS -->
@@ -594,6 +592,37 @@ footer{background:var(--surface);border-top:1px solid var(--border);padding:2rem
       <div class="admin-tab-content" id="tabCommandes">
         <div id="adminCommandesList"><div class="loading-grid"><div class="spinner"></div><span>Chargement…</span></div></div>
       </div>
+
+      <!-- TAB PROMO -->
+      <div class="admin-tab-content" id="tabPromo">
+        <div class="admin-form">
+          <div class="admin-form-title">🎯 Bandeau promo du site</div>
+          <div class="help-tip">
+            💡 Ce que tu remplis ici s'affiche automatiquement en bandeau sur le site — plus besoin de toucher au code. La promo se désactive toute seule à la date ou au nombre de clients atteint.
+          </div>
+          <div class="admin-row">
+            <div><label class="admin-label">Prix normal (FCFA)</label><input type="number" class="admin-input" id="p-normal" placeholder="6000"/></div>
+            <div><label class="admin-label">Prix promo (FCFA)</label><input type="number" class="admin-input" id="p-promo" placeholder="3000"/></div>
+          </div>
+          <div style="margin-bottom:.8rem;">
+            <label class="admin-label">Type de limite</label>
+            <select class="admin-input" id="p-limittype" onchange="window.togglePromoLimitField()">
+              <option value="date">📅 Date limite</option>
+              <option value="count">🔢 Nombre de clients</option>
+            </select>
+          </div>
+          <div style="margin-bottom:.8rem;" id="p-limitvalue-wrap">
+            <label class="admin-label" id="p-limitvalue-label">Date de fin</label>
+            <input type="date" class="admin-input" id="p-limitvalue" style="margin-bottom:0;"/>
+          </div>
+          <div style="margin-bottom:.8rem;"><label class="admin-label">Description courte</label><input type="text" class="admin-input" id="p-desc" placeholder="Ex: Offre de lancement" style="margin-bottom:0;"/></div>
+          <div style="margin-bottom:1rem;display:flex;align-items:center;gap:.5rem;">
+            <input type="checkbox" id="p-active" style="width:16px;height:16px;"/>
+            <label for="p-active" style="font-size:.78rem;color:var(--text);">Promo active (affichée sur le site)</label>
+          </div>
+          <button class="admin-save" id="saveBtnPromo" onclick="window.savePromo()">✅ Enregistrer la promo</button>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -613,7 +642,7 @@ footer{background:var(--surface);border-top:1px solid var(--border);padding:2rem
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getFirestore, collection, getDocs, addDoc, deleteDoc, doc, orderBy, query } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getFirestore, collection, getDocs, addDoc, deleteDoc, doc, orderBy, query, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCpqQAaGZjIqkvrU-misqUWWVW4Z0DyaX8",
@@ -645,6 +674,12 @@ async function fbAddCommande(data){
 async function fbDeleteLogo(id){
   try{await deleteDoc(doc(db,'logos',id));return true;}catch(e){return false;}
 }
+async function fbGetPromo(){
+  try{const s=await getDoc(doc(db,'settings','promo'));return s.exists()?s.data():null;}catch(e){return null;}
+}
+async function fbSetPromo(data){
+  try{await setDoc(doc(db,'settings','promo'),data);return true;}catch(e){return false;}
+}
 
 let allLogos=[], cart=[], currentFilter='all', deleteId=null, isAdmin=false;
 
@@ -656,6 +691,29 @@ async function loadLogos(){
   document.getElementById('logoGrid').innerHTML='<div class="loading-grid"><div class="spinner"></div><span>Chargement…</span></div>';
   allLogos=await fbGetLogos();
   renderLogos();
+}
+
+async function loadPromoBanner(){
+  const el=document.getElementById('promoBanner');
+  const promo=await fbGetPromo();
+  if(!promo||!promo.active){el.style.display='none';return;}
+  let isActive=true, remainingTxt='';
+  if(promo.limitType==='date'){
+    const end=new Date(promo.limitValue+'T23:59:59');
+    isActive=new Date()<=end;
+    remainingTxt='jusqu\'au '+end.toLocaleDateString('fr-FR',{day:'2-digit',month:'long',year:'numeric'});
+  }else if(promo.limitType==='count'){
+    const cmd=await fbGetCommandes();
+    const used=cmd.length;
+    const max=Number(promo.limitValue)||0;
+    isActive=used<max;
+    remainingTxt=Math.max(max-used,0)+' places restantes sur '+max;
+  }
+  if(!isActive){el.style.display='none';return;}
+  el.style.display='flex';
+  el.style.cssText+='background:linear-gradient(135deg,rgba(255,107,53,.12),rgba(247,201,72,.08));border:1px solid rgba(255,107,53,.3);border-radius:12px;padding:.9rem 1.3rem;margin-bottom:1.6rem;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:.6rem;';
+  el.innerHTML='<div style="font-size:.85rem;color:var(--text);font-weight:600;">🎯 Tous les modèles à <span style="color:var(--c1);">'+fp(promo.promoPrice)+'</span> <span style="text-decoration:line-through;color:var(--muted);font-weight:400;">'+fp(promo.normalPrice)+'</span></div>'
+    +'<div style="font-size:.72rem;color:var(--muted);">'+(promo.description||'Offre de lancement')+' — '+remainingTxt+'</div>';
 }
 
 function renderLogos(){
@@ -755,6 +813,7 @@ window.switchTab=function(btn,id){
   document.querySelectorAll('.admin-tab-content').forEach(t=>t.classList.remove('active'));
   btn.classList.add('active');document.getElementById(id).classList.add('active');
   if(id==='tabCommandes')loadCommandes();
+  if(id==='tabPromo')loadPromoForm();
 };
 
 async function loadAdminData(){
@@ -788,6 +847,43 @@ async function loadCommandes(){
       +'</div>';
   }).join('')+'</div>';
 }
+
+window.togglePromoLimitField=function(){
+  const type=document.getElementById('p-limittype').value;
+  const input=document.getElementById('p-limitvalue');
+  const label=document.getElementById('p-limitvalue-label');
+  if(type==='date'){input.type='date';label.textContent='Date de fin';input.placeholder='';}
+  else{input.type='number';label.textContent='Nombre de clients max';input.placeholder='Ex: 20';}
+};
+
+async function loadPromoForm(){
+  const promo=await fbGetPromo();
+  if(!promo)return;
+  document.getElementById('p-normal').value=promo.normalPrice||'';
+  document.getElementById('p-promo').value=promo.promoPrice||'';
+  document.getElementById('p-limittype').value=promo.limitType||'date';
+  window.togglePromoLimitField();
+  document.getElementById('p-limitvalue').value=promo.limitValue||'';
+  document.getElementById('p-desc').value=promo.description||'';
+  document.getElementById('p-active').checked=!!promo.active;
+}
+
+window.savePromo=async function(){
+  const data={
+    normalPrice:Number(document.getElementById('p-normal').value)||0,
+    promoPrice:Number(document.getElementById('p-promo').value)||0,
+    limitType:document.getElementById('p-limittype').value,
+    limitValue:document.getElementById('p-limitvalue').value,
+    description:document.getElementById('p-desc').value.trim(),
+    active:document.getElementById('p-active').checked
+  };
+  const btn=document.getElementById('saveBtnPromo');
+  btn.disabled=true;btn.textContent='Enregistrement…';
+  const ok=await fbSetPromo(data);
+  btn.disabled=false;btn.textContent='✅ Enregistrer la promo';
+  if(ok){showToast('Promo mise à jour ✅');loadPromoBanner();}
+  else showToast('Erreur — vérifie ta connexion');
+};
 
 window.addLogo=async function(){
   const url=document.getElementById('a-url').value.trim();
@@ -850,6 +946,7 @@ function checkRoute(){if(window.location.hash==='#admin-lm2026')window.openAdmin
 window.addEventListener('hashchange',checkRoute);
 window.addEventListener('load',checkRoute);
 loadLogos();
+loadPromoBanner();
 initReveal();
 </script>
 </body>
